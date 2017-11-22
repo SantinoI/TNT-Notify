@@ -2,9 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
-import logging
-import requests
-import re
+import logging, requests, re, time, os
 from pprint import pprint
 from xml.etree import ElementTree
 
@@ -20,12 +18,22 @@ def start(bot, update):
 def set(bot, update, args, job_queue, chat_data):
     chat_id = update.message.chat_id
     r = requests.get('http://www.tntvillage.scambioetico.org/rss.php?c=29&p=40')
-    if(r.status_code == requests.codes.ok):
+    if(r.status_code == 200):
         tree = ElementTree.fromstring(r.content)
         for neighbor in tree.iter('item'):
-            args = [re.sub('[^0-9a-zA-Z]+', '', x.lower()) for x in args]
-            if all(ext in re.sub('[^0-9a-zA-Z]+', '',neighbor.find('title').text.lower()) for ext in args):
-                print(neighbor.find('title').text.encode("utf8"))
+            title = neighbor.find('title').text
+            params = [y for y in [re.sub('[^0-9a-zA-Z]+', '', x.lower()) for x in args] if y]
+            if all(ext in re.sub('[^0-9a-zA-Z]+', '', title.lower()) for ext in params):
+                link = neighbor.find('enclosure').get('url')
+                bot.send_message(chat_id=update.message.chat_id, text="*Serie TV Trovata:*\n{}\n[Link Torrent]({})".format(title, link), parse_mode="Markdown")    
+                torRequest = requests.get(link)
+                if(torRequest.status_code == 200):
+                    fileName = torRequest.headers.get('Content-Disposition').split(";")[1].strip().split("=")[1].strip().replace('"','')
+                    with open(fileName, 'wb') as f:
+                        f.write(torRequest.content)    
+                    bot.send_document(chat_id=update.message.chat_id, document=open(fileName, 'rb'))
+                    os.remove(fileName)
+
 
 def error(bot, update, error):
     logger.warn('Update "%s" caused error "%s"' % (update, error))
