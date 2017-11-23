@@ -20,8 +20,6 @@ def start(bot, update):
 def set(bot, update, args, job_queue, chat_data):
     chat_id = update.message.chat_id
     name = [y for y in [re.sub('[^0-9a-zA-Z]+', '', x.lower()) for x in args] if y]    
-    # Add job to queue
-    '''
     job = [
         job_queue.run_daily(lambda bot, job: check(bot, job, chat_data), datetime.time(9, 00, 00),  context=chat_id, name='At 09:00'),
         job_queue.run_daily(lambda bot, job: check(bot, job, chat_data), datetime.time(11, 00, 00), context=chat_id, name='At 11:00'),
@@ -29,17 +27,19 @@ def set(bot, update, args, job_queue, chat_data):
         job_queue.run_daily(lambda bot, job: check(bot, job, chat_data), datetime.time(18, 00, 00), context=chat_id, name='At 18:00'),
         job_queue.run_daily(lambda bot, job: check(bot, job, chat_data), datetime.time(20, 00, 00), context=chat_id, name='At 20:00')
     ]
-    '''
 
+    '''
+    For testing
     job = [
         job_queue.run_repeating(lambda bot, job: check(bot, job, chat_data), 10, context=chat_id, name='At 09:00')
     ]
 
-    chat_data['job'] = job
+    '''
 
+    chat_data['job'] = job
     chat_data[" ".join(name)] = {
         "title": name,
-        "lastNotify": "",
+        "lastNotify": [],
         "originalName": " ".join(args)
     }
 
@@ -48,27 +48,24 @@ def set(bot, update, args, job_queue, chat_data):
 def check(bot, job, chat_data):
     for key, value in chat_data.items():
         if key != 'job':
-            bot.send_message(job.context, text= value["originalName"])
+            r = requests.get('http://www.tntvillage.scambioetico.org/rss.php?c=29&p=40')
+            if(r.status_code == 200):
+                tree = ElementTree.fromstring(r.content)
+                for neighbor in tree.iter('item'):
+                    title = neighbor.find('title').text
+                    if not title in value["lastNotify"]:
+                        if all(ext in re.sub('[^0-9a-zA-Z]+', '', title.lower()) for ext in value["title"]):
+                            link = neighbor.find('enclosure').get('url')
+                            bot.send_message(job.context, text="*Serie TV Trovata:*\n{}\n[Link Torrent]({})".format(title, link), parse_mode="Markdown")    
+                            torRequest = requests.get(link)
+                            if(torRequest.status_code == 200):
+                                fileName = torRequest.headers.get('Content-Disposition').split(";")[1].strip().split("=")[1].strip().replace('"','')
+                                with open(fileName, 'wb') as f:
+                                    f.write(torRequest.content)    
+                                bot.send_document(job.context, document=open(fileName, 'rb'))
+                                os.remove(fileName)
+                                value["lastNotify"].append(title)
 
-    '''
-    chat_id = update.message.chat_id
-    r = requests.get('http://www.tntvillage.scambioetico.org/rss.php?c=29&p=40')
-    if(r.status_code == 200):
-        tree = ElementTree.fromstring(r.content)
-        for neighbor in tree.iter('item'):
-            title = neighbor.find('title').text
-            params = [y for y in [re.sub('[^0-9a-zA-Z]+', '', x.lower()) for x in args] if y]
-            if all(ext in re.sub('[^0-9a-zA-Z]+', '', title.lower()) for ext in params):
-                link = neighbor.find('enclosure').get('url')
-                bot.send_message(chat_id, text="*Serie TV Trovata:*\n{}\n[Link Torrent]({})".format(title, link), parse_mode="Markdown")    
-                torRequest = requests.get(link)
-                if(torRequest.status_code == 200):
-                    fileName = torRequest.headers.get('Content-Disposition').split(";")[1].strip().split("=")[1].strip().replace('"','')
-                    with open(fileName, 'wb') as f:
-                        f.write(torRequest.content)    
-                    bot.send_document(chat_id=update.message.chat_id, document=open(fileName, 'rb'))
-                    os.remove(fileName)
-    '''
 
 def error(bot, update, error):
     logger.warn('Update "%s" caused error "%s"' % (update, error))
