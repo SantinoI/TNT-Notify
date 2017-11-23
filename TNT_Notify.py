@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
-import logging, requests, re, time, os
+import logging, requests, re, time, os, datetime
 from pprint import pprint
 from xml.etree import ElementTree
 
@@ -10,12 +10,47 @@ from xml.etree import ElementTree
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     level=logging.INFO)
 
+TOKEN = open('token.conf', 'r').read().replace("\n", "")
+
 logger = logging.getLogger(__name__)
 
 def start(bot, update):    
     update.message.reply_text('Insert /set <Name> to insert a new serie')
 
 def set(bot, update, args, job_queue, chat_data):
+    chat_id = update.message.chat_id
+    name = [y for y in [re.sub('[^0-9a-zA-Z]+', '', x.lower()) for x in args] if y]    
+    # Add job to queue
+    '''
+    job = [
+        job_queue.run_daily(lambda bot, job: check(bot, job, chat_data), datetime.time(9, 00, 00),  context=chat_id, name='At 09:00'),
+        job_queue.run_daily(lambda bot, job: check(bot, job, chat_data), datetime.time(11, 00, 00), context=chat_id, name='At 11:00'),
+        job_queue.run_daily(lambda bot, job: check(bot, job, chat_data), datetime.time(15, 00, 00), context=chat_id, name='At 15:00'),
+        job_queue.run_daily(lambda bot, job: check(bot, job, chat_data), datetime.time(18, 00, 00), context=chat_id, name='At 18:00'),
+        job_queue.run_daily(lambda bot, job: check(bot, job, chat_data), datetime.time(20, 00, 00), context=chat_id, name='At 20:00')
+    ]
+    '''
+
+    job = [
+        job_queue.run_repeating(lambda bot, job: check(bot, job, chat_data), 10, context=chat_id, name='At 09:00')
+    ]
+
+    chat_data['job'] = job
+
+    chat_data[" ".join(name)] = {
+        "title": name,
+        "lastNotify": "",
+        "originalName": " ".join(args)
+    }
+
+    update.message.reply_text('Serie successfully set!')
+
+def check(bot, job, chat_data):
+    for key, value in chat_data.items():
+        if key != 'job':
+            bot.send_message(job.context, text= value["originalName"])
+
+    '''
     chat_id = update.message.chat_id
     r = requests.get('http://www.tntvillage.scambioetico.org/rss.php?c=29&p=40')
     if(r.status_code == 200):
@@ -25,7 +60,7 @@ def set(bot, update, args, job_queue, chat_data):
             params = [y for y in [re.sub('[^0-9a-zA-Z]+', '', x.lower()) for x in args] if y]
             if all(ext in re.sub('[^0-9a-zA-Z]+', '', title.lower()) for ext in params):
                 link = neighbor.find('enclosure').get('url')
-                bot.send_message(chat_id=update.message.chat_id, text="*Serie TV Trovata:*\n{}\n[Link Torrent]({})".format(title, link), parse_mode="Markdown")    
+                bot.send_message(chat_id, text="*Serie TV Trovata:*\n{}\n[Link Torrent]({})".format(title, link), parse_mode="Markdown")    
                 torRequest = requests.get(link)
                 if(torRequest.status_code == 200):
                     fileName = torRequest.headers.get('Content-Disposition').split(";")[1].strip().split("=")[1].strip().replace('"','')
@@ -33,14 +68,14 @@ def set(bot, update, args, job_queue, chat_data):
                         f.write(torRequest.content)    
                     bot.send_document(chat_id=update.message.chat_id, document=open(fileName, 'rb'))
                     os.remove(fileName)
-
+    '''
 
 def error(bot, update, error):
     logger.warn('Update "%s" caused error "%s"' % (update, error))
 
 
 def main():
-    updater = Updater('353012747:AAGwaGCDPPorx1CaBgS90DWpnIngPcaP-5E')
+    updater = Updater(TOKEN)
     dp = updater.dispatcher
     
     dp.add_handler(CommandHandler("start", start))
