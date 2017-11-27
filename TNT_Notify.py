@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackQueryHandler
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 import logging, requests, re, time, os, datetime
 from pprint import pprint
 from xml.etree import ElementTree
@@ -20,23 +21,24 @@ def start(bot, update):
 def set(bot, update, args, job_queue, chat_data):
     chat_id = update.message.chat_id
     name = [y for y in [re.sub('[^0-9a-zA-Z]+', '', x.lower()) for x in args] if y]    
-    job = [
-        job_queue.run_daily(lambda bot, job: check(bot, job, chat_data), datetime.time(9, 00, 00),  context=chat_id, name='At 09:00'),
-        job_queue.run_daily(lambda bot, job: check(bot, job, chat_data), datetime.time(11, 00, 00), context=chat_id, name='At 11:00'),
-        job_queue.run_daily(lambda bot, job: check(bot, job, chat_data), datetime.time(15, 00, 00), context=chat_id, name='At 15:00'),
-        job_queue.run_daily(lambda bot, job: check(bot, job, chat_data), datetime.time(18, 00, 00), context=chat_id, name='At 18:00'),
-        job_queue.run_daily(lambda bot, job: check(bot, job, chat_data), datetime.time(20, 00, 00), context=chat_id, name='At 20:00')
-    ]
-
+    
+    if not chat_data['job']:   
+        job = [
+            job_queue.run_daily(lambda bot, job: check(bot, job, chat_data), datetime.time(9, 00, 00),  context=chat_id, name='At 09:00'),
+            job_queue.run_daily(lambda bot, job: check(bot, job, chat_data), datetime.time(11, 00, 00), context=chat_id, name='At 11:00'),
+            job_queue.run_daily(lambda bot, job: check(bot, job, chat_data), datetime.time(15, 00, 00), context=chat_id, name='At 15:00'),
+            job_queue.run_daily(lambda bot, job: check(bot, job, chat_data), datetime.time(18, 00, 00), context=chat_id, name='At 18:00'),
+            job_queue.run_daily(lambda bot, job: check(bot, job, chat_data), datetime.time(20, 00, 00), context=chat_id, name='At 20:00')
+        ]
+        chat_data['job'] = job
     '''
-    For testing
+    #For testing
     job = [
         job_queue.run_repeating(lambda bot, job: check(bot, job, chat_data), 10, context=chat_id, name='At 09:00')
     ]
-
+    chat_data['job'] = job
     '''
 
-    chat_data['job'] = job
     chat_data[" ".join(name)] = {
         "title": name,
         "lastNotify": [],
@@ -66,6 +68,30 @@ def check(bot, job, chat_data):
                                 os.remove(fileName)
                                 value["lastNotify"].append(title)
 
+def unset(bot, update, chat_data):
+    keyboard = []
+    count = 0
+    for key, value in chat_data.items():
+        if key != 'job':
+            keyboard.append([InlineKeyboardButton(value["originalName"], callback_data = key)])
+    
+   
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    update.message.reply_text('Please choose:', reply_markup=reply_markup)
+
+def button(bot, update, chat_data):
+    query = update.callback_query
+    serieTv = chat_data[query.data]
+    originalName = serieTv["originalName"]
+    del chat_data[originalName]
+
+    bot.edit_message_text(text="Serie tv cancellata: {}".format(query.data),
+                          chat_id=query.message.chat_id,
+                          message_id=query.message.message_id)
+    
+
+
 
 def error(bot, update, error):
     logger.warn('Update "%s" caused error "%s"' % (update, error))
@@ -75,10 +101,12 @@ def main():
     updater = Updater(TOKEN)
     dp = updater.dispatcher
     
+
     dp.add_handler(CommandHandler("start", start))
     dp.add_handler(CommandHandler("help", help))
+    dp.add_handler(CommandHandler('unset', unset, pass_chat_data=True))
+    dp.add_handler(CallbackQueryHandler(button, pass_chat_data=True))
     dp.add_handler(CommandHandler("set", set, pass_args=True, pass_job_queue=True, pass_chat_data=True))
-
 
     # log all errors
     dp.add_error_handler(error)
