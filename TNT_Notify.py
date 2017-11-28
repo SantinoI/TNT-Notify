@@ -17,14 +17,14 @@ LINK = "http://www.tntvillage.scambioetico.org/rss.php?c=29&p="
 logger = logging.getLogger(__name__)
 
 def help(bot, update):    
-    update.message.reply_text('Use /set <name> to insert a new serie\nUse /unset to show the list of your series and delete once\nUse /last <number> to show the last number series uploaded')
+    update.message.reply_text('Use /set <name> to insert a new serie\nUse /unset to show the list of your series and delete one\nUse /last <number> to show the last number series uploaded')
 
 def set(bot, update, args, job_queue, chat_data):
     if len(args) >= 1:
         chat_id = update.message.chat_id
         name = [y for y in [re.sub('[^0-9a-zA-Z]+', '', x.lower()) for x in args] if y]    
         
-        '''
+    
         if 'job' in chat_data:   
             job = [
                 job_queue.run_daily(lambda bot, job: check(bot, job, chat_data), datetime.time(9, 00, 00),  context=chat_id, name='At 09:00'),
@@ -40,7 +40,7 @@ def set(bot, update, args, job_queue, chat_data):
             job_queue.run_repeating(lambda bot, job: check(bot, job, chat_data), 10, context=chat_id, name='At 09:00')
         ]
         chat_data['job'] = job
-    
+        '''
 
         chat_data[" ".join(name)] = {
             "title": name,
