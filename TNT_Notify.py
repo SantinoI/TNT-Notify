@@ -25,7 +25,7 @@ def set(bot, update, args, job_queue, chat_data):
         name = [y for y in [re.sub('[^0-9a-zA-Z]+', '', x.lower()) for x in args] if y]    
         
     
-        if 'job' in chat_data:   
+        if 'job' not in chat_data:   
             job = [
                 job_queue.run_daily(lambda bot, job: check(bot, job, chat_data), datetime.time(9, 00, 00),  context=chat_id, name='At 09:00'),
                 job_queue.run_daily(lambda bot, job: check(bot, job, chat_data), datetime.time(11, 00, 00), context=chat_id, name='At 11:00'),
