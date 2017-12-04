@@ -17,7 +17,7 @@ LINK = "http://www.tntvillage.scambioetico.org/rss.php?c=29&p="
 logger = logging.getLogger(__name__)
 
 def help(bot, update):    
-    update.message.reply_text('Use /set <name> to insert a new serie\nUse /unset to show the list of your series and delete one\nUse /last <number> to show the last number series uploaded')
+    update.message.reply_text('Use /set <name> to insert a new serie\nUse /unset to show the list of your series and delete one\nUse /last <number> to show the last number series uploaded\nUse /chek to check if there are updates')
 
 def set(bot, update, args, job_queue, chat_data):
     if len(args) >= 1:
@@ -34,13 +34,6 @@ def set(bot, update, args, job_queue, chat_data):
                 job_queue.run_daily(lambda bot, job: check(bot, job, chat_data), datetime.time(20, 00, 00), context=chat_id, name='At 20:00')
             ]
             chat_data['job'] = job
-        '''
-        #For testing
-        job = [
-            job_queue.run_repeating(lambda bot, job: check(bot, job, chat_data), 10, context=chat_id, name='At 09:00')
-        ]
-        chat_data['job'] = job
-        '''
 
         chat_data[" ".join(name)] = {
             "title": name,
@@ -72,6 +65,11 @@ def last(bot, update, args):
             update.message.reply_text('The number must be between 1 and 80')
     except (IndexError, ValueError):
         update.message.reply_text('Usage: /last <number>')
+
+def _check(bot, update,job_queue, chat_data):
+    chat_id = update.message.chat_id
+    job_queue.run_once(lambda bot, job: check(bot, job, chat_data),1,context=chat_id)
+
 
 def check(bot, job, chat_data):
     for key, value in chat_data.items():
@@ -137,7 +135,7 @@ def main():
     dp.add_handler(CallbackQueryHandler(button, pass_chat_data=True))
     dp.add_handler(CommandHandler("last", last, pass_args=True))
     dp.add_handler(CommandHandler("set", set, pass_args=True, pass_job_queue=True, pass_chat_data=True))
-
+    dp.add_handler(CommandHandler("check",_check, pass_job_queue=True, pass_chat_data=True))
     # log all errors
     dp.add_error_handler(error)
 
