@@ -1,5 +1,5 @@
 # TNT-Notify
-![alt text](https://github.com/SantinoI/TNT-Notify/blob/master/tntNotify.png)
+<img align='left' src="https://github.com/SantinoI/TNT-Notify/blob/master/tntNotify.png" width ='250'>
 
 **TNT-Notify**  is a bot telegram that allows you to receive a notification when a new episode of your favorite TV series is online on tnt-village.
 
