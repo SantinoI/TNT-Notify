@@ -67,7 +67,7 @@ def last(bot, update, args):
                     for d in descr:	
                         if "torrent data" in d.lower():
                             description = d.split(":")[-1].strip() 
-                    bot.send_message(update.message.chat_id, text="<b>Serie TV:</b>\n{}\n<b>Info:</b>\n{}\n<a href='{}'>Link Torrent</a>".format(title, description, link), parse_mode="HTML")
+                    bot.send_message(update.message.chat_id, text="<b>Serie TV:</b>\n{}\n<b>Info:</b>\n{}\n<a href='{}'>Link Torrent</a>".format(title.encode("utf-8"), description.encode("utf-8"), link), parse_mode="HTML")
         else:
             update.message.reply_text('The number must be between 1 and 80')
     except (IndexError, ValueError):
@@ -89,7 +89,7 @@ def check(bot, job, chat_data):
                             for d in descr:	
                                 if "torrent data" in d.lower():
                                     description = d.split(":")[-1].strip() 
-                            bot.send_message(job.context, text="<b>Serie TV Found:</b>\n{}\n<b>Info:</b>\n{}\n<a href='{}'>Link Torrent</a>".format(title, description, link), parse_mode="HTML")
+                            bot.send_message(job.context, text="<b>Serie TV Found:</b>\n{}\n<b>Info:</b>\n{}\n<a href='{}'>Link Torrent</a>".format(title.encode("utf-8"), description.encode("utf-8"), link), parse_mode="HTML")
                             torRequest = requests.get(link)
                             if(torRequest.status_code == 200):
                                 fileName = torRequest.headers.get('Content-Disposition').split(";")[1].strip().split("=")[1].strip().replace('"','')
